@@ -1,13 +1,16 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
-import { queryAll, queryOne } from "@/lib/db";
+import { getAllVendors, getVendorBySlug } from "@/lib/products.server";
 
 export const APIRoute = createAPIFileRoute("/api/vendors")({
   GET: async () => {
     try {
-      const vendors = await queryAll("SELECT * FROM public.vendors");
+      const vendors = await getAllVendors();
       return new Response(JSON.stringify(vendors), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Source": "airtable",
+        },
       });
     } catch (error) {
       console.error("Error fetching vendors:", error);
@@ -22,10 +25,7 @@ export const APIRoute = createAPIFileRoute("/api/vendors")({
 export const APIRouteBySlug = createAPIFileRoute("/api/vendors/$slug")({
   GET: async ({ params }) => {
     try {
-      const vendor = await queryOne(
-        "SELECT * FROM public.vendors WHERE slug = $1",
-        [params.slug]
-      );
+      const vendor = await getVendorBySlug(params.slug);
       if (!vendor) {
         return new Response(JSON.stringify({ error: "Vendor not found" }), {
           status: 404,
@@ -34,7 +34,10 @@ export const APIRouteBySlug = createAPIFileRoute("/api/vendors/$slug")({
       }
       return new Response(JSON.stringify(vendor), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Source": "airtable",
+        },
       });
     } catch (error) {
       console.error("Error fetching vendor:", error);

@@ -1,5 +1,5 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
-import { queryAll } from "@/lib/db";
+import { searchProducts } from "@/lib/products.server";
 
 export const APIRoute = createAPIFileRoute("/api/products/search")({
   GET: async ({ request }) => {
@@ -14,22 +14,14 @@ export const APIRoute = createAPIFileRoute("/api/products/search")({
         });
       }
 
-      const searchTerm = `%${query}%`;
-      const products = await queryAll(
-        `SELECT
-          p.id, p.slug, p.name, p.price_cents, p.unit_label, p.image_url, p.description,
-          v.id as vendor_id, v.slug as vendor_slug, v.name as vendor_name
-        FROM public.products p
-        JOIN public.vendors v ON p.vendor_id = v.id
-        WHERE p.name ILIKE $1 OR p.description ILIKE $1
-        ORDER BY p.name ASC
-        LIMIT 50`,
-        [searchTerm]
-      );
+      const products = await searchProducts(query);
 
       return new Response(JSON.stringify(products), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Source": "airtable",
+        },
       });
     } catch (error) {
       console.error("Error searching products:", error);

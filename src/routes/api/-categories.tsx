@@ -1,15 +1,16 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
-import { queryAll } from "@/lib/db";
+import { getCategories } from "@/lib/products.server";
 
 export const APIRoute = createAPIFileRoute("/api/categories")({
   GET: async () => {
     try {
-      const categories = await queryAll(
-        "SELECT * FROM public.categories ORDER BY sort_order"
-      );
+      const categories = await getCategories();
       return new Response(JSON.stringify(categories), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Source": "airtable",
+        },
       });
     } catch (error) {
       console.error("Error fetching categories:", error);

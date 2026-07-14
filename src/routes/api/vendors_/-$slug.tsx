@@ -1,13 +1,10 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
-import { queryOne } from "@/lib/db";
+import { getVendorBySlug } from "@/lib/products.server";
 
 export const APIRoute = createAPIFileRoute("/api/vendors/$slug")({
   GET: async ({ params }) => {
     try {
-      const vendor = await queryOne(
-        "SELECT * FROM public.vendors WHERE slug = $1",
-        [params.slug]
-      );
+      const vendor = await getVendorBySlug(params.slug);
       if (!vendor) {
         return new Response(JSON.stringify({ error: "Vendor not found" }), {
           status: 404,
@@ -16,7 +13,10 @@ export const APIRoute = createAPIFileRoute("/api/vendors/$slug")({
       }
       return new Response(JSON.stringify(vendor), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Source": "airtable",
+        },
       });
     } catch (error) {
       console.error("Error fetching vendor:", error);
