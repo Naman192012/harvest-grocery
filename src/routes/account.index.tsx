@@ -1,7 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut as fbSignOut } from "firebase/auth";
-import { auth } from "@/integrations/firebase/client";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -16,19 +14,18 @@ function AccountPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.navigate({ to: "/auth", search: { next: "/account" } });
-        return;
-      }
-      setEmail(user.email ?? user.phoneNumber ?? null);
-      setLoading(false);
-    });
-    return unsub;
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      router.navigate({ to: "/auth", search: { next: "/account" } });
+      return;
+    }
+    setEmail(userId);
+    setLoading(false);
   }, [router]);
 
   const signOut = async () => {
-    await fbSignOut(auth);
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
     router.navigate({ to: "/" });
   };
 

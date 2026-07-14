@@ -1,8 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ShoppingBag, User, Search } from "lucide-react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/integrations/firebase/client";
 import { getCart } from "@/lib/cart.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -14,10 +12,8 @@ export function SiteHeader() {
   const cartFn = useServerFn(getCart);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setUserId(user?.uid ?? null);
-    });
-    return unsub;
+    const stored = localStorage.getItem("userId");
+    setUserId(stored);
   }, []);
 
   const { data: cartCount = 0 } = useQuery({

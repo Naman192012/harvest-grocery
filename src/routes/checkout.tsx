@@ -2,8 +2,6 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/integrations/firebase/client";
 import { getCart, placeOrder } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -27,11 +25,9 @@ function CheckoutPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setSignedIn(!!user);
-      if (!user) router.navigate({ to: "/auth", search: { next: "/checkout" } });
-    });
-    return unsub;
+    const userId = localStorage.getItem("userId");
+    setSignedIn(!!userId);
+    if (!userId) router.navigate({ to: "/auth", search: { next: "/checkout" } });
   }, [router]);
 
   const { data: items } = useQuery({

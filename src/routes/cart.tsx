@@ -2,8 +2,6 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/integrations/firebase/client";
 import { getCart, updateCartItem } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -27,11 +25,9 @@ function CartPage() {
   const updateFn = useServerFn(updateCartItem);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setSignedIn(!!user);
-      setCheckingAuth(false);
-    });
-    return unsub;
+    const userId = localStorage.getItem("userId");
+    setSignedIn(!!userId);
+    setCheckingAuth(false);
   }, []);
 
   const { data: items, isLoading } = useQuery({

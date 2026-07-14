@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { formatPrice, itemPrice } from "@/lib/format";
-import { auth } from "@/integrations/firebase/client";
 import { addToCart } from "@/lib/cart.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,7 +30,8 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     e.stopPropagation();
     setBusy(true);
     try {
-      if (!auth.currentUser) {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
         router.navigate({ to: "/auth", search: { next: "/cart" } });
         return;
       }
