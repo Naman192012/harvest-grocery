@@ -43,7 +43,13 @@
       "Bash(git check-ignore *)",
       "PowerShell($g = Get-Command gh -ErrorAction SilentlyContinue; if \\($g\\) { $g.Source; gh auth status } else { \"gh not found\" })",
       "Bash(git rm *)",
-      "PowerShell(winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements --silent)"
+      "PowerShell(winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements --silent)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(git branch *)",
+      "PowerShell($p = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; if \\(Test-Path $p\\) { & $p --version } else { $g = Get-Command gh -ErrorAction SilentlyContinue; if \\($g\\) { & gh --version } else { \"gh not ready yet\" } })",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
+      "Bash(git remote *)",
+      "Bash(git push *)"
     ]
   }
 }

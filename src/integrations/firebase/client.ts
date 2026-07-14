@@ -10,8 +10,20 @@ const firebaseConfig: FirebaseOptions = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
 };
 
-// Reuse the app across HMR reloads / multiple imports instead of re-initializing.
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let app: any;
+let auth: any;
+let googleProvider: any;
 
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+try {
+  // Reuse the app across HMR reloads / multiple imports instead of re-initializing.
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
+} catch (error) {
+  console.warn("Firebase initialization failed. Using mock auth.", error);
+  // Provide mock auth that doesn't crash but won't actually authenticate
+  auth = { currentUser: null };
+  googleProvider = null;
+}
+
+export { auth, googleProvider };
