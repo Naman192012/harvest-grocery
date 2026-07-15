@@ -25,7 +25,7 @@ export const getCart = createServerFn({ method: "GET" })
 export const addToCart = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ productId: z.string().uuid(), quantity: z.number().int().min(1).max(99) }).parse(d)
+    z.object({ productId: z.string(), quantity: z.number().int().min(1).max(99) }).parse(d)
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
