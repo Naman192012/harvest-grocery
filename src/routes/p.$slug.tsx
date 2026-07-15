@@ -6,7 +6,6 @@ import { ProductCard } from "@/components/product-card";
 import { formatPrice, itemPrice } from "@/lib/format";
 import { useServerFn } from "@tanstack/react-start";
 import { addToCart } from "@/lib/cart.functions";
-import { getProductBySlug, getRelatedProducts } from "@/lib/products.functions";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Minus, Plus, MapPin } from "lucide-react";
@@ -47,25 +46,25 @@ function ProductPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const add = useServerFn(addToCart);
-  const getProductFn = useServerFn(getProductBySlug);
-  const getRelatedFn = useServerFn(getRelatedProducts);
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState(false);
 
   const { data: product, isLoading: productLoading } = useQuery({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const data = await getProductFn({ slug });
+      const { getProductBySlug } = await import("@/lib/products.server");
+      const data = getProductBySlug(slug);
       if (!data) throw notFound();
       return data;
     },
   });
 
   const { data: related = [] } = useQuery({
-    queryKey: ["related", product?.category?.slug, product?.id],
+    queryKey: ["related", product?.category?.slug],
     queryFn: async () => {
-      if (!product) return [];
-      return getRelatedFn({ categorySlug: product.category.slug, excludeSlug: product.slug });
+      if (!product?.category?.slug) return [];
+      const { getRelatedProducts } = await import("@/lib/products.server");
+      return getRelatedProducts(product.category.slug, product.slug);
     },
     enabled: !!product,
   });
