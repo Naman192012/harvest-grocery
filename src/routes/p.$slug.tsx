@@ -52,7 +52,7 @@ function ProductPage() {
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState(false);
 
-  const { data: product } = useQuery({
+  const { data: product, isLoading: productLoading } = useQuery({
     queryKey: ["product", slug],
     queryFn: async () => {
       const data = await getProductFn({ slug });
@@ -61,7 +61,7 @@ function ProductPage() {
     },
   });
 
-  const { data: related } = useQuery({
+  const { data: related = [] } = useQuery({
     queryKey: ["related", product?.category?.slug, product?.id],
     queryFn: async () => {
       if (!product) return [];
@@ -88,6 +88,18 @@ function ProductPage() {
       setBusy(false);
     }
   };
+
+  if (productLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="flex flex-1 items-center justify-center">
+          <p>Loading product...</p>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
