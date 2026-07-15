@@ -1,4 +1,5 @@
 import { AirtableRecord, AirtableProductFields, AirtableVendorFields, AirtableCategoryFields } from '@/integrations/airtable/types';
+import { getImageUrl } from './product-images';
 
 export interface TransformedProduct {
   id: string;
@@ -135,14 +136,17 @@ export function transformAirtableProduct(
       }
     }
 
+    const slug = fields.slug || slugify(fields.name);
+    const imageUrl = fields.image_url ? validateImageUrl(fields.image_url) : getImageUrl(slug);
+
     return {
-      id: fields.slug || record.id,
-      slug: fields.slug || slugify(fields.name),
+      id: slug,
+      slug,
       name: fields.name,
       description: fields.description,
       price_cents: Math.round(fields.price_cents),
       unit_label: fields.unit_label,
-      image_url: fields.image_url ? validateImageUrl(fields.image_url) : undefined,
+      image_url: imageUrl,
       featured: fields.featured || false,
       category,
       vendor,
