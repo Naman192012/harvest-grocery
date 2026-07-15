@@ -286,6 +286,30 @@ export async function getAirtableFeaturedProducts() {
   }
 }
 
+export async function getAirtableProductsByVendor(vendorSlug: string) {
+  try {
+    const products = await getAirtableProducts();
+    return products.filter((p) => p.vendor?.slug === vendorSlug);
+  } catch (err) {
+    console.warn('[Airtable] Failed to filter products by vendor:', err);
+
+    if (process.env.AIRTABLE_FALLBACK_ENABLED === 'true') {
+      try {
+        const rows = await queryAll(
+          'SELECT * FROM products WHERE vendor_slug = ? ORDER BY name',
+          [vendorSlug]
+        );
+        return rows || [];
+      } catch (fallbackErr) {
+        console.error('[Airtable] Fallback vendor filter failed:', fallbackErr);
+        return [];
+      }
+    }
+
+    throw err;
+  }
+}
+
 export function clearAirtableCache(table?: string) {
   try {
     const client = getAirtableClient();
