@@ -1,59 +1,53 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
-  getAirtableCategories,
-  getAirtableVendors,
-  getAirtableFeaturedProducts,
-  getAirtableProductsByCategory,
-  searchAirtableProducts,
-  getAirtableProductBySlug,
-  getAirtableProductsByVendor,
-} from "./airtable-data.server";
-
-async function getRelatedProductsImpl(categorySlug: string, excludeSlug: string) {
-  const products = await getAirtableProductsByCategory(categorySlug);
-  return products
-    .filter((p) => p.slug !== excludeSlug)
-    .slice(0, 4);
-}
+  getCategories as getCategoriesData,
+  getAllVendors as getAllVendorsData,
+  getFeaturedProducts as getFeaturedProductsData,
+  getProductsByCategory as getProductsByCategoryData,
+  searchProducts as searchProductsData,
+  getProductBySlug as getProductBySlugData,
+  getProductsByVendor as getProductsByVendorData,
+  getRelatedProducts as getRelatedProductsData,
+} from "./products.server";
 
 export const getCategories = createServerFn({ method: "GET" }).handler(async () => {
-  return getAirtableCategories();
+  return getCategoriesData();
 });
 
 export const getAllVendors = createServerFn({ method: "GET" }).handler(async () => {
-  return getAirtableVendors();
+  return getAllVendorsData();
 });
 
 export const getFeaturedProducts = createServerFn({ method: "GET" }).handler(async () => {
-  return getAirtableFeaturedProducts();
+  return getFeaturedProductsData();
 });
 
 export const getProductsByCategory = createServerFn({ method: "GET" })
   .inputValidator((d: any) => d as { slug: string })
   .handler(async ({ data }) => {
-    return getAirtableProductsByCategory(data.slug);
+    return getProductsByCategoryData(data.slug);
   });
 
 export const searchProducts = createServerFn({ method: "GET" })
   .inputValidator((d: any) => d as { query: string })
   .handler(async ({ data }) => {
-    return searchAirtableProducts(data.query);
+    return searchProductsData(data.query);
   });
 
 export const getProductBySlug = createServerFn({ method: "GET" })
   .inputValidator((d: any) => d as { slug: string })
   .handler(async ({ data }) => {
-    return getAirtableProductBySlug(data.slug);
+    return getProductBySlugData(data.slug);
   });
 
 export const getProductsByVendor = createServerFn({ method: "GET" })
   .inputValidator((d: any) => d as { slug: string })
   .handler(async ({ data }) => {
-    return getAirtableProductsByVendor(data.slug);
+    return getProductsByVendorData(data.slug);
   });
 
 export const getRelatedProducts = createServerFn({ method: "GET" })
   .inputValidator((d: any) => d as { categorySlug: string; excludeSlug: string })
   .handler(async ({ data }) => {
-    return getRelatedProductsImpl(data.categorySlug, data.excludeSlug);
+    return getRelatedProductsData(data.categorySlug, data.excludeSlug);
   });

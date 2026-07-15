@@ -74,8 +74,9 @@ function ProductPage() {
     if (!product) return;
     setBusy(true);
     try {
-      if (!auth.currentUser) {
-        router.navigate({ to: "/auth", search: { next: "/cart" } });
+      const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null;
+      if (!userId) {
+        router.navigate({ to: "/auth", search: { next: `/p/${product.slug}` } });
         return;
       }
       await add({ data: { productId: product.id, quantity: qty } });
