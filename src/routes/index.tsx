@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductCard } from "@/components/product-card";
 import { ArrowRight } from "lucide-react";
+import { getCategories, getAllVendors, getFeaturedProducts } from "@/lib/products.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,26 +22,21 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  const getCategoriesFn = useServerFn(getCategories);
+  const getAllVendorsFn = useServerFn(getAllVendors);
+  const getFeaturedProductsFn = useServerFn(getFeaturedProducts);
+
   const { data: categories } = useQuery({
     queryKey: ["categories"],
-    queryFn: async () => {
-      const { getCategories } = await import("@/lib/products.server");
-      return getCategories();
-    },
+    queryFn: () => getCategoriesFn(),
   });
   const { data: vendors } = useQuery({
     queryKey: ["vendors-home"],
-    queryFn: async () => {
-      const { getAllVendors } = await import("@/lib/products.server");
-      return getAllVendors();
-    },
+    queryFn: () => getAllVendorsFn(),
   });
   const { data: featured } = useQuery({
     queryKey: ["featured-products"],
-    queryFn: async () => {
-      const { getFeaturedProducts } = await import("@/lib/products.server");
-      return getFeaturedProducts();
-    },
+    queryFn: () => getFeaturedProductsFn(),
   });
 
   return (
