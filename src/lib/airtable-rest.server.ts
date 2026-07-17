@@ -8,7 +8,7 @@ const API_ROOT = `https://api.airtable.com/v0/${BASE_ID}`;
 
 function safeDiag() {
   const envKeys = Object.keys(process.env).filter((k) => k.toUpperCase().includes("AIRTABLE"));
-  return `baseIdRaw=${JSON.stringify(process.env.AIRTABLE_BASE_ID)} tokenPrefix=${JSON.stringify(process.env.AIRTABLE_API_TOKEN?.slice(0, 10))} matchingEnvKeys=${JSON.stringify(envKeys)} totalEnvKeyCount=${Object.keys(process.env).length}`;
+  return `MARKER-7f3a91 baseIdRaw=${JSON.stringify(process.env.AIRTABLE_BASE_ID)} tokenPrefix=${JSON.stringify(process.env.AIRTABLE_API_TOKEN?.slice(0, 10))} matchingEnvKeys=${JSON.stringify(envKeys)} totalEnvKeyCount=${Object.keys(process.env).length}`;
 }
 
 export async function airtableFetch(path: string, options: RequestInit = {}) {
