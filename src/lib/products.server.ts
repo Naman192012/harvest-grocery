@@ -90,6 +90,11 @@ export function getProductsByVendor(slug: string) {
   return productsData.filter((p) => p.vendor_slug === slug).map(shape);
 }
 
+export function getProductById(id: string) {
+  const p = productsData.find((pr) => pr.id === id);
+  return p ? shape(p) : null;
+}
+
 export function getProductBySlug(slug: string) {
   const p = productsData.find((pr) => pr.slug === slug);
   if (!p) return null;

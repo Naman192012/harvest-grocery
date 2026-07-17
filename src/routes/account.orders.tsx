@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { getOrders } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { formatPrice } from "@/lib/format";
@@ -14,26 +15,20 @@ export const Route = createFileRoute("/account/orders")({
 function OrdersPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const getOrdersFn = useServerFn(getOrders);
+
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        router.navigate({ to: "/auth", search: { next: "/account/orders" } });
-        return;
-      }
-      setReady(true);
-    });
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      router.navigate({ to: "/auth", search: { next: "/account/orders" } });
+      return;
+    }
+    setReady(true);
   }, [router]);
 
   const { data: orders } = useQuery({
     queryKey: ["my-orders"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, items:order_items(*)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getOrdersFn(),
     enabled: ready,
   });
 
@@ -56,7 +51,7 @@ function OrdersPage() {
               <div>
                 <p className="font-medium">Order #{o.id.slice(0, 8).toUpperCase()}</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(o.created_at).toLocaleDateString()} · {(o.items?.length ?? 0)} items
+                  {new Date(o.created_at).toLocaleDateString()} · {o.item_count} items
                 </p>
               </div>
               <div className="text-right">

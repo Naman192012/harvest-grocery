@@ -1,77 +1,93 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { queryAll, queryOne, query } from "@/lib/db";
+import { getProductById } from "@/lib/products.server";
+import {
+  listCartItems,
+  findCartItem,
+  createCartItem,
+  updateCartItemFields,
+  deleteCartItem,
+  deleteCartItems,
+  createOrder,
+  createOrderItems,
+  listOrders,
+  getOrder,
+  getOrderItemsByIds,
+} from "@/lib/airtable-cart.server";
+
+function shapeCartRecord(record: { id: string; fields: Record<string, any> }) {
+  const f = record.fields;
+  return {
+    id: record.id,
+    quantity: f["Quantity"],
+    product: {
+      id: f["Product ID"],
+      slug: f["Product Slug"],
+      name: f["Product Name"],
+      price_cents: f["Price Cents"],
+      unit_label: f["Unit Label"] ?? null,
+      image_url: f["Image URL"] ?? null,
+      vendor: { slug: f["Vendor Slug"], name: f["Vendor Name"] },
+    },
+  };
+}
 
 export const getCart = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { userId } = context;
-    const items = await queryAll(
-      `SELECT
-        ci.id, ci.quantity,
-        p.id as product_id, p.slug, p.name, p.price_cents, p.unit_label, p.image_url,
-        v.id as vendor_id, v.slug as vendor_slug, v.name as vendor_name
-      FROM public.cart_items ci
-      JOIN public.products p ON ci.product_id = p.id
-      JOIN public.vendors v ON p.vendor_id = v.id
-      WHERE ci.user_id = $1
-      ORDER BY ci.created_at ASC`,
-      [userId]
-    );
-    return items;
+    const records = await listCartItems(context.userId);
+    return records.map(shapeCartRecord);
   });
 
 export const addToCart = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({ productId: z.string(), quantity: z.number().int().min(1).max(99) }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { userId } = context;
-    const existing = await queryOne(
-      "SELECT id, quantity FROM public.cart_items WHERE user_id = $1 AND product_id = $2",
-      [userId, data.productId]
-    );
+    const product = getProductById(data.productId);
+    if (!product) throw new Error("Product not found");
+
+    const existing = await findCartItem(context.userId, data.productId);
 
     if (existing) {
-      const newQuantity = Math.min(99, existing.quantity + data.quantity);
-      await query(
-        "UPDATE public.cart_items SET quantity = $1 WHERE id = $2",
-        [newQuantity, existing.id]
-      );
+      const newQuantity = Math.min(99, existing.fields["Quantity"] + data.quantity);
+      await updateCartItemFields(existing.id, { Quantity: newQuantity });
     } else {
-      await query(
-        "INSERT INTO public.cart_items (user_id, product_id, quantity) VALUES ($1, $2, $3)",
-        [userId, data.productId, data.quantity]
-      );
+      await createCartItem({
+        "User Email": context.userId,
+        "Product ID": product.id,
+        "Product Slug": product.slug,
+        "Product Name": product.name,
+        "Price Cents": product.price_cents,
+        "Unit Label": product.unit_label ?? "",
+        "Image URL": product.image_url ?? "",
+        "Vendor Slug": product.vendor.slug,
+        "Vendor Name": product.vendor.name,
+        Quantity: data.quantity,
+      });
     }
     return { ok: true };
   });
 
 export const updateCartItem = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ itemId: z.string().uuid(), quantity: z.number().int().min(0).max(99) }).parse(d)
+    z.object({ itemId: z.string(), quantity: z.number().int().min(0).max(99) }).parse(d)
   )
-  .handler(async ({ data, context }) => {
-    const { userId } = context;
+  .handler(async ({ data }) => {
     if (data.quantity === 0) {
-      await query(
-        "DELETE FROM public.cart_items WHERE id = $1 AND user_id = $2",
-        [data.itemId, userId]
-      );
+      await deleteCartItem(data.itemId);
     } else {
-      await query(
-        "UPDATE public.cart_items SET quantity = $1 WHERE id = $2 AND user_id = $3",
-        [data.quantity, data.itemId, userId]
-      );
+      await updateCartItemFields(data.itemId, { Quantity: data.quantity });
     }
     return { ok: true };
   });
 
 export const placeOrder = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) =>
     z
       .object({
@@ -81,54 +97,81 @@ export const placeOrder = createServerFn({ method: "POST" })
       .parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { userId } = context;
+    const cartRecords = await listCartItems(context.userId);
+    if (!cartRecords || cartRecords.length === 0) throw new Error("Cart is empty");
 
-    const items = await queryAll(
-      `SELECT
-        ci.quantity,
-        p.id as product_id, p.name as product_name, p.price_cents,
-        v.id as vendor_id, v.name as vendor_name
-      FROM public.cart_items ci
-      JOIN public.products p ON ci.product_id = p.id
-      JOIN public.vendors v ON p.vendor_id = v.id
-      WHERE ci.user_id = $1`,
-      [userId]
-    );
-
-    if (!items || items.length === 0) throw new Error("Cart is empty");
-
-    const total = items.reduce((sum, it) => sum + it.quantity * it.price_cents, 0);
+    const items = cartRecords.map((r) => r.fields);
+    const total = items.reduce((sum, it) => sum + it["Quantity"] * it["Price Cents"], 0);
     const deliveryFee = 599;
     const grandTotal = total + deliveryFee;
 
-    const orderResult = await queryOne(
-      `INSERT INTO public.orders (user_id, total_cents, delivery_address, delivery_slot, status)
-       VALUES ($1, $2, $3, $4, 'confirmed')
-       RETURNING id`,
-      [userId, grandTotal, data.deliveryAddress, data.deliverySlot]
+    const order = await createOrder({
+      "Customer Email": context.userId,
+      "Customer Name": context.userId,
+      "Order Date": new Date().toISOString(),
+      Status: "Placed",
+      "Total Amount": grandTotal,
+      "Delivery Address": data.deliveryAddress,
+      "Delivery Slot": data.deliverySlot,
+    });
+
+    await createOrderItems(
+      items.map((it) => ({
+        fields: {
+          "Product Name": it["Product Name"],
+          Quantity: it["Quantity"],
+          Price: it["Price Cents"],
+          "Total Line Value": it["Quantity"] * it["Price Cents"],
+          SKU: it["Product Slug"],
+          "Vendor Name": it["Vendor Name"],
+          Order: [order.id],
+        },
+      }))
     );
 
-    if (!orderResult) throw new Error("Failed to create order");
+    await deleteCartItems(cartRecords.map((r) => r.id));
 
-    const orderItems = items.map((it) => [
-      orderResult.id,
-      it.product_id,
-      it.vendor_id,
-      it.product_name,
-      it.vendor_name,
-      it.price_cents,
-      it.quantity,
-    ]);
+    return { orderId: order.id };
+  });
 
-    for (const item of orderItems) {
-      await query(
-        `INSERT INTO public.order_items (order_id, product_id, vendor_id, product_name, vendor_name, price_cents, quantity)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        item
-      );
-    }
+export const getOrders = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const records = await listOrders(context.userId);
+    return records.map((r) => ({
+      id: r.id,
+      total_cents: r.fields["Total Amount"],
+      status: r.fields["Status"],
+      created_at: r.fields["Order Date"],
+      item_count: Array.isArray(r.fields["Order Items"]) ? r.fields["Order Items"].length : 0,
+    }));
+  });
 
-    await query("DELETE FROM public.cart_items WHERE user_id = $1", [userId]);
+export const getOrderById = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d) => z.object({ orderId: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const order = await getOrder(data.orderId);
+    if (!order || order.fields["Customer Email"] !== context.userId) return null;
 
-    return { orderId: orderResult.id };
+    const itemIds: string[] = Array.isArray(order.fields["Order Items"])
+      ? order.fields["Order Items"]
+      : [];
+    const itemRecords = await getOrderItemsByIds(itemIds);
+
+    return {
+      id: order.id,
+      total_cents: order.fields["Total Amount"],
+      delivery_address: order.fields["Delivery Address"],
+      delivery_slot: order.fields["Delivery Slot"],
+      status: order.fields["Status"],
+      created_at: order.fields["Order Date"],
+      items: itemRecords.map((r) => ({
+        id: r.id,
+        product_name: r.fields["Product Name"],
+        vendor_name: r.fields["Vendor Name"] ?? "Other",
+        price_cents: r.fields["Price"],
+        quantity: r.fields["Quantity"],
+      })),
+    };
   });

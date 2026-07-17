@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { getOrderById } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { formatPrice } from "@/lib/format";
@@ -14,22 +15,22 @@ export const Route = createFileRoute("/orders/$id")({
 
 function OrderPage() {
   const { id } = Route.useParams();
+  const router = useRouter();
   const [ready, setReady] = useState(false);
+  const getOrderFn = useServerFn(getOrderById);
+
   useEffect(() => {
-    supabase.auth.getSession().then(() => setReady(true));
-  }, []);
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      router.navigate({ to: "/auth", search: { next: `/orders/${id}` } });
+      return;
+    }
+    setReady(true);
+  }, [router, id]);
 
   const { data: order } = useQuery({
     queryKey: ["order", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*, items:order_items(*)")
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getOrderFn({ data: { orderId: id } }),
     enabled: ready,
   });
 
