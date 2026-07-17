@@ -12,10 +12,13 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  // Build target is the wrapper's default (Cloudflare Workers) — this app is
-  // served on Lovable's hosting, which runs on Workers. On Workers, env vars
-  // are only available inside a request, so every process.env.X read must be
-  // deferred to request time (see airtableConfig() in airtable-rest.server.ts
-  // and getAirtableClient() in airtable-data.server.ts). A top-level read
-  // captures undefined and never recovers.
+  // Production is deployed on Vercel (Node runtime), where env vars are exposed
+  // via process.env — so we build for the Vercel preset, not the wrapper's
+  // Cloudflare default. This is what lets the Airtable server code read
+  // AIRTABLE_BASE_ID / AIRTABLE_API_TOKEN directly from process.env at runtime.
+  // (On Cloudflare/Lovable those secrets never reach the SSR runtime, which is
+  // why this app targets Vercel instead.)
+  nitro: {
+    preset: "vercel",
+  },
 });
