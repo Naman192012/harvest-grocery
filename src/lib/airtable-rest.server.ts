@@ -17,7 +17,8 @@ export async function airtableFetch(path: string, options: RequestInit = {}) {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Airtable API error ${res.status}: ${body}`);
+    const diag = `baseIdLen=${BASE_ID.length} baseIdEdges=${JSON.stringify(BASE_ID.slice(0, 4))}..${JSON.stringify(BASE_ID.slice(-4))} baseIdHasQuote=${BASE_ID.includes('"')} tokenLen=${API_TOKEN.length} tokenFirst10=${JSON.stringify(API_TOKEN.slice(0, 10))} tokenHasQuote=${API_TOKEN.includes('"')}`;
+    throw new Error(`Airtable API error ${res.status}: ${body} | DIAG: ${diag}`);
   }
   return res.json();
 }
