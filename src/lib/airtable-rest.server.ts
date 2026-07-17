@@ -2,19 +2,9 @@
 // data — cart, orders, and accounts. Deliberately uncached, unlike the
 // read-heavy catalog client in src/integrations/airtable/client.ts.
 
-const BASE_ID = process.env.AIRTABLE_BASE_ID ?? "";
-const API_TOKEN = process.env.AIRTABLE_API_TOKEN ?? "";
+const BASE_ID = process.env.AIRTABLE_BASE_ID!;
+const API_TOKEN = process.env.AIRTABLE_API_TOKEN!;
 const API_ROOT = `https://api.airtable.com/v0/${BASE_ID}`;
-
-function safeDiag() {
-  const envKeys = Object.keys(process.env).filter((k) => k.toUpperCase().includes("AIRTABLE"));
-  return (
-    `baseIdRaw=${JSON.stringify(process.env.AIRTABLE_BASE_ID)} ` +
-    `tokenRaw=${JSON.stringify(process.env.AIRTABLE_API_TOKEN ? process.env.AIRTABLE_API_TOKEN.slice(0, 10) + "..." : process.env.AIRTABLE_API_TOKEN)} ` +
-    `matchingEnvKeys=${JSON.stringify(envKeys)} ` +
-    `nodeEnv=${process.env.NODE_ENV} vercelEnv=${process.env.VERCEL_ENV}`
-  );
-}
 
 export async function airtableFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${API_ROOT}/${path}`, {
@@ -27,7 +17,7 @@ export async function airtableFetch(path: string, options: RequestInit = {}) {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Airtable API error ${res.status}: ${body} | DIAG: ${safeDiag()}`);
+    throw new Error(`Airtable API error ${res.status}: ${body}`);
   }
   return res.json();
 }

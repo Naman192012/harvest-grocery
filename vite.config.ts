@@ -12,4 +12,12 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // The wrapper's default nitro build target is Cloudflare Workers, which
+  // reads env vars/secrets through a request-scoped binding, not process.env.
+  // This app deploys to Vercel (Node runtime), where env vars ARE exposed via
+  // process.env — so the build target must match, or every process.env.X
+  // read silently comes back undefined at runtime.
+  nitro: {
+    preset: "vercel",
+  },
 });
