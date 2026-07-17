@@ -1,34 +1,11 @@
-// Direct Airtable REST calls for cart/order data (no caching — this is
-// mutable, per-user, transactional data, unlike the read-heavy catalog
-// client in src/integrations/airtable/client.ts).
+// Airtable-backed cart/order storage. See airtable-rest.server.ts for the
+// shared low-level fetch helper (also used by airtable-auth.server.ts).
 
-const BASE_ID = process.env.AIRTABLE_BASE_ID!;
-const API_TOKEN = process.env.AIRTABLE_API_TOKEN!;
-const API_ROOT = `https://api.airtable.com/v0/${BASE_ID}`;
+import { airtableFetch, escapeFormulaString } from "@/lib/airtable-rest.server";
 
 const CART_TABLE = "Cart Items";
 const ORDERS_TABLE = "Orders";
 const ORDER_ITEMS_TABLE = "Order Items";
-
-async function airtableFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${API_ROOT}/${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${API_TOKEN}`,
-      "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Airtable API error ${res.status}: ${body}`);
-  }
-  return res.json();
-}
-
-function escapeFormulaString(value: string) {
-  return value.replace(/'/g, "\\'");
-}
 
 // ---------------- Cart Items ----------------
 

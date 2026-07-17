@@ -1,6 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { useServerFn } from "@tanstack/react-start";
+import { signIn, signUp } from "@/lib/auth.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { toast } from "sonner";
@@ -22,6 +24,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const signUpFn = useServerFn(signUp);
+  const signInFn = useServerFn(signIn);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -40,16 +44,19 @@ function AuthPage() {
           setBusy(false);
           return;
         }
-        localStorage.setItem("userId", email);
-        localStorage.setItem("userName", name);
+        const result = await signUpFn({ data: { email, password, name } });
+        localStorage.setItem("userId", result.userId);
+        localStorage.setItem("userName", result.userName);
         toast.success("Account created — you're signed in");
       } else {
-        localStorage.setItem("userId", email);
+        const result = await signInFn({ data: { email, password } });
+        localStorage.setItem("userId", result.userId);
+        localStorage.setItem("userName", result.userName);
         toast.success("Signed in");
       }
       goNext();
     } catch (err: any) {
-      toast.error("Sign in failed");
+      toast.error(err?.message ?? "Sign in failed");
     } finally {
       setBusy(false);
     }
