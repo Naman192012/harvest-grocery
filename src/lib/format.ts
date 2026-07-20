@@ -10,9 +10,16 @@ export function itemPrice(amount: number): number {
   return Math.max(0, amount * (1 - DISCOUNT_RATE) - FLAT_ITEM_OFF);
 }
 
-/** Fees (e.g. delivery): 30% off, no flat deduction. */
-export function feePrice(amount: number): number {
-  return amount * (1 - DISCOUNT_RATE);
+// Delivery pricing: ₹30 per distinct product in the cart, waived once the
+// raw (undiscounted) order subtotal exceeds ₹250.
+export const DELIVERY_FEE_PER_PRODUCT = 30;
+export const FREE_DELIVERY_THRESHOLD = 250;
+
+/** Delivery fee in rupees given the raw order subtotal and distinct product count. */
+export function deliveryFee(rawSubtotal: number, distinctProductCount: number): number {
+  if (distinctProductCount === 0) return 0;
+  if (rawSubtotal > FREE_DELIVERY_THRESHOLD) return 0;
+  return distinctProductCount * DELIVERY_FEE_PER_PRODUCT;
 }
 
 /** Format a rupee amount as INR. */

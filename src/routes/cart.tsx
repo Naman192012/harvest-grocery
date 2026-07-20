@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getCart, updateCartItem } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { formatPrice, itemPrice, feePrice } from "@/lib/format";
+import { formatPrice, itemPrice, deliveryFee } from "@/lib/format";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,8 +13,6 @@ export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Your cart — Harvest" }] }),
   component: CartPage,
 });
-
-const DELIVERY_FEE = 599;
 
 function CartPage() {
   const router = useRouter();
@@ -71,7 +69,8 @@ function CartPage() {
     (sum: number, it: any) => sum + it.quantity * itemPrice(it.product?.price_cents ?? 0),
     0
   );
-  const total = subtotal + (items && items.length > 0 ? feePrice(DELIVERY_FEE) : 0);
+  const delivery = deliveryFee(subtotal, items?.length ?? 0);
+  const total = subtotal + delivery;
 
   const setQty = async (itemId: string, quantity: number) => {
     try {
@@ -196,7 +195,7 @@ function CartPage() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Delivery</dt>
-                  <dd>{formatPrice(feePrice(DELIVERY_FEE))}</dd>
+                  <dd>{delivery === 0 ? "Free" : formatPrice(delivery)}</dd>
                 </div>
               </dl>
               <div className="mt-4 flex items-baseline justify-between border-t border-border/60 pt-4">

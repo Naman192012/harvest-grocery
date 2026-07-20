@@ -3,6 +3,7 @@ import { z } from "zod";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getProductById } from "@/lib/products.server";
+import { deliveryFee, itemPrice } from "@/lib/format";
 import {
   listCartItems,
   findCartItem,
@@ -101,9 +102,15 @@ export const placeOrder = createServerFn({ method: "POST" })
     if (!cartRecords || cartRecords.length === 0) throw new Error("Cart is empty");
 
     const items = cartRecords.map((r) => r.fields);
-    const total = items.reduce((sum, it) => sum + it["Quantity"] * it["Price Cents"], 0);
-    const deliveryFee = 599;
-    const grandTotal = total + deliveryFee;
+    const subtotal = items.reduce((sum, it) => sum + it["Quantity"] * it["Price Cents"], 0);
+    // Free-delivery threshold is judged against the discounted price the
+    // customer actually sees on product/cart pages, not the raw stored price.
+    const discountedSubtotal = items.reduce(
+      (sum, it) => sum + it["Quantity"] * itemPrice(it["Price Cents"]),
+      0
+    );
+    const delivery = deliveryFee(discountedSubtotal, items.length);
+    const grandTotal = subtotal + delivery;
 
     const order = await createOrder({
       "Customer Email": context.userId,

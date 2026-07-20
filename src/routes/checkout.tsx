@@ -5,15 +5,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { getCart, placeOrder } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { formatPrice, itemPrice, feePrice } from "@/lib/format";
+import { formatPrice, itemPrice, deliveryFee } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Harvest" }] }),
   component: CheckoutPage,
 });
-
-const DELIVERY_FEE = 599;
 
 function CheckoutPage() {
   const router = useRouter();
@@ -40,7 +38,8 @@ function CheckoutPage() {
     (s: number, it: any) => s + it.quantity * itemPrice(it.product?.price_cents ?? 0),
     0
   );
-  const total = subtotal + (items && items.length > 0 ? feePrice(DELIVERY_FEE) : 0);
+  const delivery = deliveryFee(subtotal, items?.length ?? 0);
+  const total = subtotal + delivery;
 
   const onPlace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +162,7 @@ function CheckoutPage() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Delivery</dt>
-                  <dd>{formatPrice(feePrice(DELIVERY_FEE))}</dd>
+                  <dd>{delivery === 0 ? "Free" : formatPrice(delivery)}</dd>
                 </div>
               </dl>
               <div className="mt-4 flex items-baseline justify-between border-t border-border/60 pt-4">
