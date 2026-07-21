@@ -16,6 +16,7 @@ import {
   listOrders,
   getOrder,
   getOrderItemsByIds,
+  getShippingDetailsByIds,
 } from "@/lib/airtable-cart.server";
 
 function shapeCartRecord(record: { id: string; fields: Record<string, any> }) {
@@ -166,6 +167,12 @@ export const getOrderById = createServerFn({ method: "GET" })
       : [];
     const itemRecords = await getOrderItemsByIds(itemIds);
 
+    const shippingIds: string[] = Array.isArray(order.fields["Shipping Details"])
+      ? order.fields["Shipping Details"]
+      : [];
+    const shippingRecords = await getShippingDetailsByIds(shippingIds);
+    const shippingFields = shippingRecords[0]?.fields;
+
     return {
       id: order.id,
       total_cents: order.fields["Total Amount"],
@@ -173,6 +180,17 @@ export const getOrderById = createServerFn({ method: "GET" })
       delivery_slot: order.fields["Delivery Slot"],
       status: order.fields["Status"],
       created_at: order.fields["Order Date"],
+      shipping: shippingFields
+        ? {
+            carrier: shippingFields["Carrier"] ?? null,
+            tracking_number: shippingFields["Tracking Number"] ?? null,
+            ship_date: shippingFields["Ship Date"] ?? null,
+            estimated_delivery: shippingFields["Estimated Delivery"] ?? null,
+            actual_delivery: shippingFields["Actual Delivery"] ?? null,
+            status: shippingFields["Shipping Status"] ?? null,
+            notes: shippingFields["Shipping Notes"] ?? null,
+          }
+        : null,
       items: itemRecords.map((r) => ({
         id: r.id,
         product_name: r.fields["Product Name"],

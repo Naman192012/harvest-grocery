@@ -6,6 +6,7 @@ import { airtableFetch, escapeFormulaString } from "@/lib/airtable-rest.server";
 const CART_TABLE = "Cart Items";
 const ORDERS_TABLE = "Orders";
 const ORDER_ITEMS_TABLE = "Order Items";
+const SHIPPING_TABLE = "Shipping Details";
 
 // ---------------- Cart Items ----------------
 
@@ -94,6 +95,17 @@ export async function getOrderItemsByIds(recordIds: string[]) {
   const formula = `OR(${recordIds.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
   const data = await airtableFetch(
     `${encodeURIComponent(ORDER_ITEMS_TABLE)}?filterByFormula=${encodeURIComponent(formula)}`
+  );
+  return data.records as { id: string; fields: Record<string, any> }[];
+}
+
+// ---------------- Shipping Details ----------------
+
+export async function getShippingDetailsByIds(recordIds: string[]) {
+  if (recordIds.length === 0) return [];
+  const formula = `OR(${recordIds.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+  const data = await airtableFetch(
+    `${encodeURIComponent(SHIPPING_TABLE)}?filterByFormula=${encodeURIComponent(formula)}`
   );
   return data.records as { id: string; fields: Record<string, any> }[];
 }

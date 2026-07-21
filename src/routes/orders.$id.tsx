@@ -6,7 +6,7 @@ import { getOrderById } from "@/lib/cart.functions";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { formatPrice } from "@/lib/format";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ClipboardList, PackageSearch, Truck, PackageCheck, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({ meta: [{ title: "Order confirmed — Harvest" }] }),
@@ -50,6 +50,48 @@ function OrderPage() {
 
         {order && (
           <div className="mt-10 space-y-6">
+            <section className="rounded-2xl border border-border/60 bg-card p-6">
+              <h2 className="font-display text-lg">Track your order</h2>
+              <div className="mt-4">
+                <TrackingSteps status={order.status} />
+              </div>
+            </section>
+
+            {order.shipping && (
+              <section className="rounded-2xl border border-border/60 bg-card p-6">
+                <h2 className="font-display text-lg">Shipping</h2>
+                <dl className="mt-3 space-y-1.5 text-sm">
+                  {order.shipping.carrier && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Carrier</dt>
+                      <dd>{order.shipping.carrier}</dd>
+                    </div>
+                  )}
+                  {order.shipping.tracking_number && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Tracking number</dt>
+                      <dd className="font-mono">{order.shipping.tracking_number}</dd>
+                    </div>
+                  )}
+                  {order.shipping.estimated_delivery && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Estimated delivery</dt>
+                      <dd>{new Date(order.shipping.estimated_delivery).toLocaleDateString()}</dd>
+                    </div>
+                  )}
+                  {order.shipping.actual_delivery && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Delivered on</dt>
+                      <dd>{new Date(order.shipping.actual_delivery).toLocaleDateString()}</dd>
+                    </div>
+                  )}
+                </dl>
+                {order.shipping.notes && (
+                  <p className="mt-3 text-xs text-muted-foreground">{order.shipping.notes}</p>
+                )}
+              </section>
+            )}
+
             <section className="rounded-2xl border border-border/60 bg-card p-6">
               <h2 className="font-display text-lg">Delivery</h2>
               <p className="mt-2 text-sm">{order.delivery_address}</p>
@@ -113,4 +155,58 @@ function groupByVendor(items: any[]) {
   const g: Record<string, any[]> = {};
   for (const it of items) (g[it.vendor_name] ??= []).push(it);
   return g;
+}
+
+const TRACKING_STEPS = [
+  { key: "Placed", label: "Placed", icon: ClipboardList },
+  { key: "Processing", label: "Processing", icon: PackageSearch },
+  { key: "Shipped", label: "Shipped", icon: Truck },
+  { key: "Delivered", label: "Delivered", icon: PackageCheck },
+];
+
+function TrackingSteps({ status }: { status: string }) {
+  if (status === "Cancelled") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+        <XCircle className="h-5 w-5" />
+        This order was cancelled.
+      </div>
+    );
+  }
+
+  const currentIndex = TRACKING_STEPS.findIndex((s) => s.key === status);
+
+  return (
+    <div className="flex items-start">
+      {TRACKING_STEPS.map((step, i) => {
+        const Icon = step.icon;
+        const done = i <= currentIndex;
+        return (
+          <div key={step.key} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${
+                  done
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <span
+                className={`text-xs font-medium ${done ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < TRACKING_STEPS.length - 1 && (
+              <div
+                className={`mx-2 mb-5 h-0.5 flex-1 ${i < currentIndex ? "bg-primary" : "bg-border"}`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
